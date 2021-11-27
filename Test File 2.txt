@@ -1,0 +1,177 @@
+from collections import defaultdict
+
+class Policy_iteration:
+
+    def __init__(self):
+        #temp save state values
+        self.state_value_temp = defaultdict(list)
+        self.state = {"Top": 0.0, "Bottom": 0.0, "Slide": 0.0}
+        self.state_name= ["Top", "Bottom", "Slide"]
+        self.Policy = defaultdict(list)
+        self.Policy_estariq = defaultdict(list)
+        self.value_estariq = defaultdict(list)
+        self.state_prob=defaultdict(lambda:defaultdict(lambda :defaultdict(list)))
+        self.Action=["D_a","a"]
+        self.Discount_factor=[0.9,0.8]
+        self.Living_reward=[4.0,1.5]
+        self.counter=0
+        self.time_stamp=1
+        #temp save action for later use.
+        self.temp_action=defaultdict(list)
+
+
+    def get_policy(self):
+        return self.Action[0]
+
+    def T(self,state,action,next_state):
+        prob=self.state_prob[state][action].get(next_state)
+        #print("State : ", state, ",   action : ", action, ",   next : ", next_state, ",   Prob : ", prob)
+        if(len(prob)>0):
+            return prob.pop()
+
+    def R(self,state,action):
+        if state == "Top":
+            if action == "a":
+                return float(self.Living_reward[0]-1)
+            else:
+                return float(self.Living_reward[0])
+        else:
+            if action == "a":
+                return float(self.Living_reward[1] - 1)
+            else:
+                return float(self.Living_reward[1])
+
+
+    def Q(self,state,action,next_state,transition):
+        return transition*(self.R(state,action)+(self.Discount_factor[1]*self.state[next_state]))
+
+    def state_probability(self,state,action,next_state,p):
+        self.state_prob[state][action][next_state].append(p)
+
+    def provide_child(self,state,action,next_state):
+        Transition=self.T(state,action,next_state)
+        value = self.Q(state, action,next_state,Transition)
+        #print("State : ",state,",   action : ",action,",   next : ",next_state,",   Prob : ",Transition,",   value of state : ",value)
+        self.state_value_temp[state].append(value)
+
+    def set_state_value(self,iteration):
+        #setup base values :
+        if iteration==0:
+            for state,value in self.state_value_temp.items():
+                self.value_estariq[state]=sum(value)
+        else:
+            for state,value in self.state_value_temp.items():
+                self.state[state]=sum(value)
+
+    def creating_policy(self,iteration):
+        if iteration==0:
+            for state,action in self.temp_action.items():
+                self.Policy_estariq[state]=action
+        else:
+
+            for state in self.temp_action.keys():
+                state_A=self.value_estariq[state]
+                state_B=self.state[state]
+
+                if state_A<state_B:
+                    Dict_act=self.temp_action[state]
+                    self.value_estariq[state]=state_B
+                    self.Policy_estariq[state]=Dict_act
+
+    def policy_evalution(self):
+        for State in self.state.keys():
+            for next_state in self.state.keys():
+                self.provide_child(State, self.get_policy(), next_state)
+                self.temp_action[State] = self.get_policy()
+            self.set_state_value(0)
+            self.creating_policy(0)
+        self.temp_action.clear()
+        #print("At Base case:")
+        #self.show_optimal_policy_and_value()
+        #print("End of Base case.")
+
+    def Setup(self,skip_state):
+            j=0
+            while j<3:
+                i = 0
+                State = self.state_name[j]
+                while i < 3:
+                    next_state = self.state_name[i]
+                    if next_state == skip_state:
+                        self.provide_child(State, self.Action[1], next_state)
+                        self.temp_action[State] = self.Action[1]
+
+                    else:
+                        self.provide_child(State, self.get_policy(), next_state)
+                        self.temp_action[State] = self.get_policy()
+                    self.set_state_value(1)
+                    #self.creating_policy(1)
+                    i = i + 1
+                self.creating_policy(1)
+                j=j+1
+
+            self.temp_action.clear()
+            self.show_optimal_policy_and_value()
+            return skip_state
+
+    def change_state(self,previous):
+        index=self.state_name.index(previous)
+        if (index+1) == len(self.state_name):
+            return self.state_name[0]
+        else:
+            return self.state_name[index+1]
+
+    def Return_action(self,Q1,Q2):
+        if Q1>Q2:
+            return "Not to accelerate"
+        else:
+            return "To accelerate"
+
+    def show_optimal_policy_and_value(self):
+        print("Optimal policy is ")
+        for Sta, act in ob.Policy_estariq.items():
+            print("State : ", Sta, ",Action : ", act)
+        print("Optimal value is : ")
+        for sta1, value in ob.value_estariq.items():
+            print("State : ", sta1, "Value : ", value, "at time stamp : ", ob.time_stamp)
+
+    def Data_entry(self):
+        self.state_probability("Top", "a", "Top", 0.8)
+        self.state_probability("Top", "a", "Slide", 0.2)
+        self.state_probability("Top", "a", "Bottom", 0.0)
+        self.state_probability("Top", "D_a", "Top", 0.6)
+        self.state_probability("Top", "D_a", "Slide", 0.4)
+        self.state_probability("Top", "D_a", "Bottom", 0.0)
+        self.state_probability("Bottom", "a", "Top", 0.65)
+        self.state_probability("Bottom", "a", "Bottom", 0.35)
+        self.state_probability("Bottom", "a", "Slide", 0.0)
+        self.state_probability("Bottom", "D_a", "Slide", 0.0)
+        self.state_probability("Bottom", "D_a", "Top", 0.0)
+        self.state_probability("Bottom", "D_a", "Bottom", 1.0)
+        self.state_probability("Slide", "a", "Top", 0.25)
+        self.state_probability("Slide", "a", "Slide", 0.65)
+        self.state_probability("Slide", "a", "Bottom", 0.1)
+        self.state_probability("Slide", "D_a", "Bottom", 1.0)
+        self.state_probability("Slide", "D_a", "Top", 0.0)
+        self.state_probability("Slide", "D_a", "Slide", 0.0)
+
+    def start(self,iter):
+        i = 0
+        iteration = iter
+        ob.Data_entry()
+        ob.policy_evalution()
+        ob.state_prob.clear()
+        skip_state=self.state_name[0]
+        while (i < iteration):
+            ob.Data_entry()
+            skip_state=ob.Setup(skip_state)
+            skip_state = self.change_state(skip_state)
+            ob.state_prob.clear()
+            ob.time_stamp = i + 1
+            i = i + 1
+
+print("Enter number of iteration : ")
+a=int(input())
+
+ob = Policy_iteration()
+ob.start(a)
